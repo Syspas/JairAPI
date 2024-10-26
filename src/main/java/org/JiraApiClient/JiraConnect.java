@@ -20,8 +20,6 @@
  *
  * @version 1.0
  */
-
-
 package org.JiraApiClient;
 
 import org.apache.commons.configuration2.PropertiesConfiguration;
@@ -37,8 +35,9 @@ import java.nio.charset.StandardCharsets;
 /**
  * Класс для извлечения данных из конфигурационного файла JIRA.
  * <p>
+ * Этот класс загружает параметры подключения к JIRA из конфигурационного файла формата properties.
  * Если файл отсутствует, он автоматически создается с параметрами по умолчанию.
- * Конфигурационный файл имеет кодировку UTF-8.
+ * Конфигурационный файл имеет кодировку UTF-8 и содержит комментарии к каждому параметру.
  * </p>
  *
  * @version 1.0
@@ -83,10 +82,14 @@ public class JiraConnect {
         try {
             return builder.getConfiguration();
         } catch (ConfigurationException e) {
-            if (!configFile.exists()) createDefaultConfigFile(configFile);
+            if (!configFile.exists()) {
+                createDefaultConfigFile(configFile);
+            }
             try {
                 return builder.getConfiguration();
             } catch (ConfigurationException ex) {
+                System.out.println("Ошибка: Не удалось загрузить конфигурацию.");
+                System.out.println("Error: Failed to load the configuration.");
                 throw new RuntimeException("Не удалось загрузить конфигурацию", ex);
             }
         }
@@ -101,13 +104,27 @@ public class JiraConnect {
         try {
             if (configFile.getParentFile() != null) configFile.getParentFile().mkdirs();
             try (FileWriter writer = new FileWriter(configFile, StandardCharsets.UTF_8)) {
-                PropertiesConfiguration config = new PropertiesConfiguration();
-                config.setProperty("jira.url", "https://example.atlassian.net");
-                config.setProperty("jira.username", "defaultUsername");
-                config.setProperty("jira.api.token", "defaultApiToken");
-                config.write(writer);
+                // Добавляем комментарии в файл конфигурации
+                writer.write("# Конфигурационный файл JIRA\n");
+                writer.write("# Configuration file for JIRA\n\n");
+
+                writer.write("# URL JIRA инстанса\n");
+                writer.write("# JIRA instance URL\n");
+                writer.write("jira.url=https://example.atlassian.net\n\n");
+
+                writer.write("# Имя пользователя для подключения к JIRA\n");
+                writer.write("# Username for connecting to JIRA\n");
+                writer.write("jira.username=defaultUsername\n\n");
+
+                writer.write("# Токен API для доступа к JIRA\n");
+                writer.write("# API token for accessing JIRA\n");
+                writer.write("jira.api.token=defaultApiToken\n");
             }
-        } catch (IOException | ConfigurationException e) {
+            System.out.println("Создан новый конфигурационный файл по пути: " + configFile.getPath());
+            System.out.println("A new configuration file was created at: " + configFile.getPath());
+        } catch (IOException e) {
+            System.out.println("Ошибка: Не удалось создать конфигурационный файл.");
+            System.out.println("Error: Failed to create the configuration file.");
             throw new RuntimeException("Не удалось создать конфигурационный файл", e);
         }
     }
