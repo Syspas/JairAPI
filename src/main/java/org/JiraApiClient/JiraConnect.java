@@ -155,4 +155,5 @@ public class JiraConnect {
     public String getJiraApiToken() {
         return jiraApiToken;
     }
+
 }

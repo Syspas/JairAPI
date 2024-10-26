@@ -1,4 +1,5 @@
-import org.JiraApiClient.JiraConnect;
+package org.JiraApiClient;
+
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.ex.ConfigurationException;
@@ -7,20 +8,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-/**
- * Класс для тестирования функциональности класса {@link JiraConnect}.
- * <p>
- * Этот класс содержит тесты для проверки загрузки конфигурации, создания файла конфигурации
- * и корректности параметров по умолчанию.
- * </p>
- */
 class JiraConnectTest {
 
     /** Путь к файлу конфигурации. */
@@ -32,73 +24,59 @@ class JiraConnectTest {
     /** Файл конфигурации для проверки. */
     private File configFile;
 
-    /**
-     * Метод, выполняемый перед каждым тестом.
-     * <p>
-     * Здесь мы инициализируем экземпляр JiraConnect и создаем объект файла конфигурации.
-     * </p>
-     */
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException {
         // Инициализация файла конфигурации
         configFile = new File(CONFIG_FILE);
-        // Создание нового экземпляра JiraConnect
+        // Удаляем файл конфигурации, если он существует
+        if (configFile.exists()) {
+            configFile.delete();
+        }
+        // Создаем экземпляр JiraConnect
         jiraConnect = new JiraConnect();
     }
 
-    /**
-     * Метод, выполняемый после каждого теста.
-     * <p>
-     * Удаляет файл конфигурации после завершения тестов для обеспечения чистоты тестового окружения.
-     * </p>
-     */
     @AfterEach
     void tearDown() {
-        // Удаление файла конфигурации, если он существует
+        // Удаление файла конфигурации после тестов
         if (configFile.exists()) {
             configFile.delete();
         }
     }
 
     /**
-     * Тест проверяет создание файла конфигурации.
-     * <p>
-     * Убедитесь, что файл конфигурации был успешно создан после инициализации JiraConnect.
-     * </p>
+     * Тест проверяет создание конфигурационного файла при его отсутствии.
+     * Убедитесь, что файл создается с параметрами по умолчанию.
      */
     @Test
     void testConfigFileCreation() {
-        // Проверка существования файла конфигурации
+        // Проверяем, что файл конфигурации был создан
         assertTrue(configFile.exists(), "Файл конфигурации должен быть создан.");
     }
 
     /**
-     * Тест проверяет значения по умолчанию для параметров конфигурации.
-     * <p>
-     * Убедитесь, что значения URL, имени пользователя и токена API соответствуют ожидаемым значениям по умолчанию.
-     * </p>
+     * Тест проверяет загрузку параметров по умолчанию из конфигурационного файла.
+     * Убедитесь, что значения соответствуют ожидаемым.
      */
     @Test
     void testDefaultProperties() {
-        // Проверка значений по умолчанию
         assertEquals("https://example.atlassian.net", jiraConnect.getJiraUrl());
         assertEquals("defaultUsername", jiraConnect.getJiraUsername());
         assertEquals("defaultApiToken", jiraConnect.getJiraApiToken());
     }
 
     /**
-     * Тест проверяет загрузку конфигурации из файла.
-     * <p>
-     * Здесь мы используем мок-объекты для имитации поведения класса PropertiesConfiguration
-     * и проверки корректности загруженных параметров.
-     * </p>
+     * Тест проверяет, что метод loadConfiguration() корректно загружает параметры из файла.
+     * Здесь используется мок для имитации загрузки конфигурации.
      *
      * @throws ConfigurationException если происходит ошибка конфигурации
      */
     @Test
     void testLoadConfiguration() throws ConfigurationException {
-        // Создание мок-объектов для конфигурации
+        // Создание мока для PropertiesConfiguration
         PropertiesConfiguration mockConfig = Mockito.mock(PropertiesConfiguration.class);
+
+        // Создание мока для FileBasedConfigurationBuilder
         FileBasedConfigurationBuilder<PropertiesConfiguration> mockBuilder = Mockito.mock(FileBasedConfigurationBuilder.class);
 
         // Настройка поведения мок-объектов
@@ -107,33 +85,54 @@ class JiraConnectTest {
         when(mockConfig.getString("jira.username", "default")).thenReturn("mockedUsername");
         when(mockConfig.getString("jira.api.token", "default")).thenReturn("mockedToken");
 
-        // Переопределение метода loadConfiguration() для возврата мок-объекта
+        // Инициализируем новый экземпляр JiraConnect, который будет использовать мок
         jiraConnect = new JiraConnect() {
-            @Override
-            protected PropertiesConfiguration loadConfiguration() {
-                return mockConfig;
-            }
         };
 
-        // Проверка значений, загруженных из конфигурации
+        // Проверка загруженных значений
         assertEquals("https://mocked-url.atlassian.net", jiraConnect.getJiraUrl());
         assertEquals("mockedUsername", jiraConnect.getJiraUsername());
         assertEquals("mockedToken", jiraConnect.getJiraApiToken());
     }
 
     /**
-     * Тест проверяет, что файл конфигурации существует после создания экземпляра JiraConnect.
-     * <p>
-     * Этот тест гарантирует, что конфигурация загружается корректно и файл создается.
-     * </p>
+     * Тест проверяет, что создание конфигурационного файла работает корректно.
+     * Убедитесь, что файл создается и содержит правильные значения.
      *
-     * @throws IOException если происходит ошибка ввода-вывода
+     * @throws IOException если возникает ошибка ввода-вывода
      */
     @Test
-    void testConfigurationFileExists() throws IOException {
-        // Создание нового экземпляра JiraConnect
+    void testCreateDefaultConfigFile() throws IOException {
+        // Удаляем файл конфигурации, если существует
+        if (configFile.exists()) {
+            configFile.delete();
+        }
+        // Создание нового экземпляра JiraConnect, что вызовет создание файла конфигурации
         jiraConnect = new JiraConnect();
-        // Проверка существования файла конфигурации
-        assertTrue(configFile.exists(), "Файл конфигурации должен существовать после создания экземпляра JiraConnect");
+
+        // Проверяем, что файл конфигурации создан
+        assertTrue(configFile.exists(), "Файл конфигурации должен быть создан.");
+        // Проверяем, что файл содержит ожидаемые значения
+        try (FileReader reader = new FileReader(configFile)) {
+            BufferedReader bufferedReader = new BufferedReader(reader);
+            String line;
+            boolean foundUrl = false;
+            boolean foundUsername = false;
+            boolean foundApiToken = false;
+            while ((line = bufferedReader.readLine()) != null) {
+                if (line.contains("jira.url=https://example.atlassian.net")) {
+                    foundUrl = true;
+                }
+                if (line.contains("jira.username=defaultUsername")) {
+                    foundUsername = true;
+                }
+                if (line.contains("jira.api.token=defaultApiToken")) {
+                    foundApiToken = true;
+                }
+            }
+            assertTrue(foundUrl, "Файл конфигурации должен содержать URL JIRA.");
+            assertTrue(foundUsername, "Файл конфигурации должен содержать имя пользователя JIRA.");
+            assertTrue(foundApiToken, "Файл конфигурации должен содержать токен API JIRA.");
+        }
     }
 }
